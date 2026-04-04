@@ -4,9 +4,20 @@ import { useState } from 'react'
 import { useCart } from '@/hooks/use-cart'
 import { Minus, Plus, Check, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { trackAddToCart } from '@/lib/analytics'
+
+interface ProductVariant {
+  id: string;
+  product_id?: string;
+  inventory_quantity?: number;
+  manage_inventory?: boolean;
+  calculated_price?: {
+    calculated_amount?: number;
+  };
+}
 
 interface AddToCartProps {
-  variant: any
+  variant: ProductVariant;
 }
 
 export default function AddToCart({ variant }: AddToCartProps) {
@@ -27,6 +38,7 @@ export default function AddToCart({ variant }: AddToCartProps) {
         onSuccess: () => {
           setJustAdded(true)
           toast.success('Added to bag')
+          trackAddToCart(variant.product_id || '', variant.id, quantity, variant.calculated_price?.calculated_amount)
           setTimeout(() => setJustAdded(false), 2000)
         },
         onError: (error: Error) => {

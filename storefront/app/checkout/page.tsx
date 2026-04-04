@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -9,6 +9,7 @@ import { ShoppingBag, ChevronRight, Loader2, Check, ArrowLeft, AlertCircle } fro
 import { toast } from 'sonner'
 import { StripePaymentForm } from '@/components/checkout/stripe-payment-form'
 import { getProductImage } from '@/lib/utils/placeholder-images'
+import { trackBeginCheckout } from '@/lib/analytics'
 
 const steps: { key: CheckoutStep; label: string }[] = [
   { key: 'info', label: 'Information' },
@@ -41,6 +42,14 @@ export default function CheckoutPage() {
   const hasItems = cart?.items && cart.items.length > 0
   const currency = cart?.currency_code || 'usd'
 
+  const trackedCheckout = useRef(false)
+  useEffect(() => {
+    if (cart?.id && hasItems && !trackedCheckout.current) {
+      trackedCheckout.current = true
+      trackBeginCheckout(cart.id, cart.total, currency)
+    }
+  }, [cart?.id, hasItems, cart?.total, currency])
+
   // Step 1: Submit info
   const handleInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,13 +68,17 @@ export default function CheckoutPage() {
     await setShippingMethod(selectedShipping)
   }
 
+  const buildSuccessUrl = (order: { id: string }) => {
+    return `/checkout/success?order=${encodeURIComponent(order.id)}`
+  }
+
   // Step 3: Place order
   const handlePlaceOrder = async () => {
     clearError()
     const order = await completeCheckout()
     if (order) {
       toast.success('Order placed successfully!')
-      router.push(`/checkout/success?order=${order.id}`)
+      router.push(buildSuccessUrl(order))
     }
   }
 
@@ -276,7 +289,7 @@ export default function CheckoutPage() {
                         const order = await completeCheckout()
                         if (order) {
                           toast.success('Order placed successfully!')
-                          router.push(`/checkout/success?order=${order.id}`)
+                          router.push(buildSuccessUrl(order))
                         }
                       }}
                       onError={(msg) => { clearError(); toast.error(msg) }}

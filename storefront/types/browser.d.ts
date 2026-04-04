@@ -1,0 +1,24 @@
+interface IdleDeadline {
+  didTimeout: boolean;
+  timeRemaining(): number;
+}
+
+interface IdleRequestOptions {
+  timeout: number;
+}
+
+interface Window {
+  requestIdleCallback(callback: (deadline: IdleDeadline) => void, options?: IdleRequestOptions): number;
+  cancelIdleCallback(handle: number): void;
+}
+
+interface NetworkInformation {
+  effectiveType: string;
+  downlink: number;
+  rtt: number;
+  saveData: boolean;
+}
+
+interface Navigator {
+  connection?: NetworkInformation;
+}

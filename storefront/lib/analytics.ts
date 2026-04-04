@@ -1,6 +1,7 @@
 import { hasAnalyticsConsent } from '@/lib/cookie-consent'
 
-const HEARTBEAT_INTERVAL = 15000 // 15 seconds
+const DEFAULT_HEARTBEAT_INTERVAL = 15000 // 15 seconds
+const SLOW_HEARTBEAT_INTERVAL = 30000 // 30 seconds on slow connections
 const FLUSH_INTERVAL = 10000 // 10 seconds
 const MAX_BATCH_SIZE = 20
 const SESSION_TIMEOUT = 30 * 60 * 1000 // 30 minutes
@@ -10,12 +11,21 @@ const LAST_ACTIVITY_KEY = 'amboras_last_activity'
 
 interface AnalyticsEvent {
   type: 'session_start' | 'page_view' | 'heartbeat' | 'session_end'
+    | 'add_to_cart' | 'begin_checkout' | 'purchase'
   url?: string
   referrer?: string
   title?: string
   utm_source?: string
   utm_medium?: string
   utm_campaign?: string
+  product_id?: string
+  variant_id?: string
+  quantity?: number
+  value?: number
+  currency?: string
+  order_id?: string
+  item_count?: number
+  cart_id?: string
   timestamp: number
 }
 
@@ -23,6 +33,24 @@ interface AnalyticsPayload {
   store_id: string
   session_id: string
   events: AnalyticsEvent[]
+}
+
+function scheduleIdle(fn: () => void): void {
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    window.requestIdleCallback(fn, { timeout: 2000 })
+  } else {
+    setTimeout(fn, 0)
+  }
+}
+
+function getHeartbeatInterval(): number {
+  if (typeof navigator !== 'undefined' && 'connection' in navigator) {
+    const conn = navigator.connection
+    if (conn?.effectiveType === 'slow-2g' || conn?.effectiveType === '2g') {
+      return SLOW_HEARTBEAT_INTERVAL
+    }
+  }
+  return DEFAULT_HEARTBEAT_INTERVAL
 }
 
 class AnalyticsTracker {
@@ -103,13 +131,54 @@ class AnalyticsTracker {
   trackPageView(url: string, title?: string): void {
     if (!this.isInitialized) return
 
+    scheduleIdle(() => {
+      this.pushEvent({
+        type: 'page_view',
+        url,
+        title,
+        timestamp: Date.now(),
+      })
+      this.updateLastActivity()
+    })
+  }
+
+  trackAddToCart(productId: string, variantId: string, quantity: number, value?: number): void {
+    if (!this.isInitialized) return
     this.pushEvent({
-      type: 'page_view',
-      url,
-      title,
+      type: 'add_to_cart',
+      url: window.location.pathname,
+      product_id: productId,
+      variant_id: variantId,
+      quantity,
+      value,
       timestamp: Date.now(),
     })
+    this.updateLastActivity()
+  }
 
+  trackBeginCheckout(cartId: string, value?: number, currency?: string): void {
+    if (!this.isInitialized) return
+    this.pushEvent({
+      type: 'begin_checkout',
+      url: '/checkout',
+      cart_id: cartId,
+      value,
+      currency,
+      timestamp: Date.now(),
+    })
+    this.updateLastActivity()
+  }
+
+  trackPurchase(orderId: string): void {
+    if (!this.isInitialized) return
+    // Only send the order ID — revenue data is tracked server-side via webhooks
+    this.pushEvent({
+      type: 'purchase',
+      url: window.location.pathname,
+      order_id: orderId,
+      timestamp: Date.now(),
+    })
+    this.flush()
     this.updateLastActivity()
   }
 
@@ -173,16 +242,19 @@ class AnalyticsTracker {
 
   private startHeartbeat(): void {
     this.stopHeartbeat()
+    const interval = getHeartbeatInterval()
     this.heartbeatTimer = setInterval(() => {
       if (document.visibilityState === 'visible') {
-        this.pushEvent({
-          type: 'heartbeat',
-          url: window.location.pathname,
-          timestamp: Date.now(),
+        scheduleIdle(() => {
+          this.pushEvent({
+            type: 'heartbeat',
+            url: window.location.pathname,
+            timestamp: Date.now(),
+          })
+          this.updateLastActivity()
         })
-        this.updateLastActivity()
       }
-    }, HEARTBEAT_INTERVAL)
+    }, interval)
   }
 
   private stopHeartbeat(): void {
@@ -265,6 +337,18 @@ export function initAnalytics(): void {
 
 export function trackPageView(url: string, title?: string): void {
   tracker?.trackPageView(url, title)
+}
+
+export function trackAddToCart(productId: string, variantId: string, quantity: number, value?: number): void {
+  tracker?.trackAddToCart(productId, variantId, quantity, value)
+}
+
+export function trackBeginCheckout(cartId: string, value?: number, currency?: string): void {
+  tracker?.trackBeginCheckout(cartId, value, currency)
+}
+
+export function trackPurchase(orderId: string): void {
+  tracker?.trackPurchase(orderId)
 }
 
 export function destroyAnalytics(): void {

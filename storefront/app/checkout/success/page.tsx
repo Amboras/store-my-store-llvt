@@ -3,11 +3,20 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle, Package, ArrowRight } from 'lucide-react'
-import { Suspense } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
+import { trackPurchase } from '@/lib/analytics'
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('order')
+
+  const tracked = useRef(false)
+  useEffect(() => {
+    if (orderId && !tracked.current) {
+      tracked.current = true
+      trackPurchase(orderId)
+    }
+  }, [orderId])
 
   return (
     <div className="container-custom py-section">
