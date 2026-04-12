@@ -198,6 +198,54 @@ NEXT_PUBLIC_ANALYTICS_ENDPOINT    # Analytics endpoint override (optional)
 PORT                              # Dev server port (default: 3000)
 ```
 
+## Debugging
+
+**When the store crashes or user reports issues, check PM2 logs first.**
+
+### Log Files (in this workspace)
+
+```
+logs/
+├── storefront-pm2-out.log   ← Next.js stdout (compilation, requests, console.log)
+└── storefront-pm2-error.log ← Next.js stderr (errors, stack traces)
+```
+
+### After Making Code Changes
+
+**ALWAYS verify your changes worked:**
+
+1. Check compilation succeeded:
+   ```bash
+   tail -20 logs/storefront-pm2-out.log
+   # Look for: "✓ Compiled / in Xs"
+   ```
+
+2. Check for runtime errors:
+   ```bash
+   tail -20 logs/storefront-pm2-error.log
+   # Should be empty or only show old errors
+   ```
+
+3. If you see `GET / 500` in out.log, immediately check error.log for stack trace
+
+### Common Error Patterns
+
+| Error in logs | Cause | Fix |
+|---------------|-------|-----|
+| `Export X was not found in module Y` | Import doesn't exist in package | Check package docs for correct export names |
+| `Module not found: Can't resolve 'X'` | Missing dependency | Check if package is in package.json |
+| `GET / 500 in Xms` | Runtime error during render | Check error.log for full stack trace |
+| `ECONNREFUSED` | Can't reach Medusa backend | Check NEXT_PUBLIC_MEDUSA_BACKEND_URL in .env.local |
+| Compilation hangs | Syntax error or infinite loop | Check error.log |
+
+### Example: lucide-react Import Error
+
+**Error:** `Export Instagram was not found in module lucide-react`
+
+**Cause:** Icon names don't exist or changed in lucide-react version
+
+**Fix:** Check [lucide.dev](https://lucide.dev) for correct icon names in the installed version. Don't assume icon names - verify they exist.
+
 ## Rules
 
 - Always use Tailwind CSS for styling
@@ -211,3 +259,5 @@ PORT                              # Dev server port (default: 3000)
 - Prices are always in cents — divide by 100 for display
 - Cart ID lives in localStorage — never assume a cart exists, always handle creation
 - Stock checks: respect `manage_inventory` flag before showing stock status
+- **After ANY code change: check `logs/storefront-pm2-out.log` for "✓ Compiled" and no 500 errors**
+- **If user reports issue: check `logs/storefront-pm2-error.log` FIRST before debugging**
