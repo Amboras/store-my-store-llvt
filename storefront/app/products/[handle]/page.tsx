@@ -1,16 +1,18 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
-export const revalidate = 3600 // ISR: revalidate every hour
+export const revalidate = 3600
 import { medusaServerClient } from '@/lib/medusa-client'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Truck, RotateCcw, Shield, ChevronRight } from 'lucide-react'
+import { Truck, RotateCcw, Shield, ChevronRight, BadgeCheck } from 'lucide-react'
 import ProductActions from '@/components/product/product-actions'
 import ProductAccordion from '@/components/product/product-accordion'
 import { ProductViewTracker } from '@/components/product/product-view-tracker'
 import { getProductPlaceholder } from '@/lib/utils/placeholder-images'
 import { type VariantExtension } from '@/components/product/product-price'
+import BundleOffer from '@/components/product/bundle-offer'
+import UrgencyBar from '@/components/product/urgency-bar'
 
 async function getProduct(handle: string) {
   try {
@@ -26,6 +28,22 @@ async function getProduct(handle: string) {
     return response.products?.[0] || null
   } catch (error) {
     console.error('Error fetching product:', error)
+    return null
+  }
+}
+
+async function getBundleProduct(handle: string) {
+  try {
+    const regionsResponse = await medusaServerClient.store.region.list()
+    const regionId = regionsResponse.regions[0]?.id
+    if (!regionId) return null
+    const response = await medusaServerClient.store.product.list({
+      handle,
+      region_id: regionId,
+      fields: '*variants.calculated_price',
+    })
+    return response.products?.[0] || null
+  } catch {
     return null
   }
 }
@@ -68,9 +86,7 @@ export async function generateMetadata({
   const { handle } = await params
   const product = await getProduct(handle)
 
-  if (!product) {
-    return { title: 'Product Not Found' }
-  }
+  if (!product) return { title: 'Product Not Found' }
 
   return {
     title: product.title,
@@ -91,21 +107,30 @@ export default async function ProductPage({
   const { handle } = await params
   const product = await getProduct(handle)
 
-  if (!product) {
-    notFound()
-  }
+  if (!product) notFound()
 
-  const variantExtensions = await getVariantExtensions(product.id)
+  const [variantExtensions, bundleProduct] = await Promise.all([
+    getVariantExtensions(product.id),
+    // Only fetch bundle for the single tee page
+    handle === 'blackout-logo-tee'
+      ? getBundleProduct('blackout-logo-tee-2-pack')
+      : null,
+  ])
 
   const allImages = [
     ...(product.thumbnail ? [{ url: product.thumbnail }] : []),
     ...(product.images || []).filter((img: any) => img.url !== product.thumbnail),
   ]
 
-  // Use placeholder if no images
   const displayImages = allImages.length > 0
     ? allImages
     : [{ url: getProductPlaceholder(product.id) }]
+
+  // Calculate total inventory for urgency
+  const totalInventory = Object.values(variantExtensions).reduce(
+    (sum, ext) => sum + (ext.inventory_quantity ?? 0),
+    0,
+  )
 
   return (
     <>
@@ -159,14 +184,14 @@ export default async function ProductPage({
 
           {/* Product Info */}
           <div className="lg:sticky lg:top-24 lg:self-start space-y-6">
-            {/* Title & Subtitle */}
+            {/* Title */}
             <div>
               {product.subtitle && (
-                <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground mb-2">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">
                   {product.subtitle}
                 </p>
               )}
-              <h1 className="text-h2 font-heading font-semibold">{product.title}</h1>
+              <h1 className="font-heading font-extrabold uppercase text-h1 leading-none">{product.title}</h1>
             </div>
 
             <ProductViewTracker
@@ -177,22 +202,47 @@ export default async function ProductPage({
               value={product.variants?.[0]?.calculated_price?.calculated_amount ?? null}
             />
 
-            {/* Variant Selector + Price + Add to Cart (client component) */}
+            {/* Urgency bar */}
+            <UrgencyBar totalInventory={totalInventory} />
+
+            {/* Variant Selector + Price + Add to Cart */}
             <ProductActions product={product} variantExtensions={variantExtensions} />
 
+            {/* Bundle Offer */}
+            {bundleProduct && (
+              <BundleOffer bundleProduct={bundleProduct} />
+            )}
+
             {/* Trust Signals */}
-            <div className="grid grid-cols-3 gap-4 py-6 border-t">
-              <div className="text-center">
-                <Truck className="h-5 w-5 mx-auto mb-1.5" strokeWidth={1.5} />
-                <p className="text-xs text-muted-foreground">Free Shipping</p>
+            <div className="grid grid-cols-3 gap-3 py-5 border-t border-b">
+              <div className="flex flex-col items-center text-center gap-1.5">
+                <div className="h-8 w-8 rounded-full bg-foreground/5 flex items-center justify-center">
+                  <Truck className="h-4 w-4" strokeWidth={1.5} />
+                </div>
+                <p className="text-xs font-medium leading-tight">Free<br />Shipping</p>
               </div>
-              <div className="text-center">
-                <RotateCcw className="h-5 w-5 mx-auto mb-1.5" strokeWidth={1.5} />
-                <p className="text-xs text-muted-foreground">30-Day Returns</p>
+              <div className="flex flex-col items-center text-center gap-1.5">
+                <div className="h-8 w-8 rounded-full bg-foreground/5 flex items-center justify-center">
+                  <RotateCcw className="h-4 w-4" strokeWidth={1.5} />
+                </div>
+                <p className="text-xs font-medium leading-tight">30-Day<br />Returns</p>
               </div>
-              <div className="text-center">
-                <Shield className="h-5 w-5 mx-auto mb-1.5" strokeWidth={1.5} />
-                <p className="text-xs text-muted-foreground">Secure Checkout</p>
+              <div className="flex flex-col items-center text-center gap-1.5">
+                <div className="h-8 w-8 rounded-full bg-foreground/5 flex items-center justify-center">
+                  <Shield className="h-4 w-4" strokeWidth={1.5} />
+                </div>
+                <p className="text-xs font-medium leading-tight">Secure<br />Checkout</p>
+              </div>
+            </div>
+
+            {/* Guarantee badge */}
+            <div className="flex items-start gap-3 bg-muted/50 border rounded-sm p-4">
+              <BadgeCheck className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+              <div>
+                <p className="text-sm font-semibold">INKDROP Quality Guarantee</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  If your print cracks, fades, or peels within 12 months of normal wear — we replace it. No questions asked.
+                </p>
               </div>
             </div>
 

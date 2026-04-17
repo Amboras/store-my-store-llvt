@@ -3,79 +3,120 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
-import { ArrowRight, Truck, Shield, RotateCcw } from 'lucide-react'
+import { ArrowRight, Truck, Shield, RotateCcw, Zap, Star, Package } from 'lucide-react'
 import CollectionSection from '@/components/marketing/collection-section'
 import { useCollections } from '@/hooks/use-collections'
 import { trackMetaEvent } from '@/lib/meta-pixel'
-import { HERO_PLACEHOLDER, LIFESTYLE_PLACEHOLDER } from '@/lib/utils/placeholder-images'
+
+const HERO_IMAGE   = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=1400&q=90'
+const LIFESTYLE_IMAGE = 'https://images.unsplash.com/photo-1556821840-3a63f15732ce?w=1400&q=90'
+
+const MARQUEE_ITEMS = [
+  'NEW DROP', 'GRAPHIC TEES', 'FREE SHIPPING OVER $75', 'LIMITED QUANTITIES',
+  'NEW DROP', 'GRAPHIC TEES', 'FREE SHIPPING OVER $75', 'LIMITED QUANTITIES',
+]
 
 export default function HomePage() {
   const { data: collections, isLoading } = useCollections()
   const [newsletterEmail, setNewsletterEmail] = useState('')
+  const [subscribed, setSubscribed] = useState(false)
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!newsletterEmail.trim()) {
-      return
-    }
-
-    trackMetaEvent('Lead', {
-      content_name: 'newsletter_signup',
-      status: 'submitted',
-    })
+    if (!newsletterEmail.trim()) return
+    trackMetaEvent('Lead', { content_name: 'newsletter_signup', status: 'submitted' })
+    setSubscribed(true)
   }
 
   return (
     <>
-      {/* Hero Section */}
-      <section className="relative bg-muted/30 overflow-hidden">
-        <div className="container-custom grid lg:grid-cols-2 gap-8 items-center py-section lg:py-32">
-          {/* Text Content */}
-          <div className="space-y-6 animate-fade-in-up">
-            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
-              New Collection
+      {/* Marquee ticker */}
+      <div className="bg-foreground text-background py-2.5 overflow-hidden">
+        <div className="flex animate-marquee whitespace-nowrap select-none">
+          {MARQUEE_ITEMS.concat(MARQUEE_ITEMS).map((item, i) => (
+            <span key={i} className="inline-flex items-center gap-6 px-8 text-xs font-heading font-semibold uppercase tracking-[0.25em]">
+              {item}
+              <span className="inline-block w-1 h-1 rounded-full bg-accent" />
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* ── HERO ── */}
+      <section className="relative bg-background overflow-hidden">
+        <div className="container-custom grid lg:grid-cols-2 gap-0 items-stretch min-h-[85vh]">
+          {/* Text */}
+          <div className="flex flex-col justify-center py-16 lg:py-24 pr-0 lg:pr-16 space-y-8 animate-fade-in-up order-2 lg:order-1">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-[0.35em] text-accent font-semibold">
+                SS25 Collection — Available Now
+              </p>
+              <h1 className="font-heading font-extrabold uppercase leading-none" style={{ fontSize: 'clamp(3rem, 8vw, 6rem)' }}>
+                Wear<br />
+                <span className="text-accent">Your</span><br />
+                World.
+              </h1>
+            </div>
+            <p className="text-base text-muted-foreground max-w-md leading-relaxed">
+              Heavyweight graphic tees for those who make a statement before they say a word.
+              Limited print runs. No restocks.
             </p>
-            <h1 className="text-display font-heading font-semibold text-balance">
-              Elevate Your Everyday
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-md leading-relaxed">
-              Thoughtfully designed products that bring beauty and function to your daily rituals.
-            </p>
-            <div className="flex flex-wrap gap-4 pt-2">
+
+            {/* Urgency pill */}
+            <div className="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 text-accent rounded-full px-4 py-2 w-fit">
+              <Zap className="h-3.5 w-3.5 fill-accent" />
+              <span className="text-xs font-semibold uppercase tracking-wider">Only 47 tees left in this drop</span>
+            </div>
+
+            <div className="flex flex-wrap gap-4">
               <Link
                 href="/products"
-                className="btn-brand-primary inline-flex items-center gap-2 px-8 py-3.5 text-sm font-semibold uppercase tracking-wide transition-opacity"
-                prefetch={true}
+                className="inline-flex items-center gap-2 bg-foreground text-background px-8 py-4 text-sm font-heading font-bold uppercase tracking-widest hover:opacity-90 transition-opacity"
               >
-                Shop Now
+                Shop the Drop
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/about"
-                className="inline-flex items-center gap-2 border-brand-primary border px-8 py-3.5 text-sm font-semibold uppercase tracking-wide hover:bg-brand-primary hover:text-white transition-colors"
-                prefetch={true}
+                className="inline-flex items-center gap-2 border border-foreground px-8 py-4 text-sm font-heading font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-colors"
               >
                 Our Story
               </Link>
             </div>
+
+            {/* Social proof row */}
+            <div className="flex items-center gap-6 pt-2 border-t">
+              <div className="flex items-center gap-1.5">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="h-3.5 w-3.5 fill-accent text-accent" />
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">4.9 / 5</span> from 2,400+ customers
+              </p>
+            </div>
           </div>
 
-          {/* Hero Image */}
-          <div className="relative aspect-[4/5] lg:aspect-[3/4] bg-muted rounded-sm overflow-hidden animate-fade-in">
+          {/* Hero image */}
+          <div className="relative min-h-[50vh] lg:min-h-full bg-muted overflow-hidden order-1 lg:order-2">
             <Image
-              src={HERO_PLACEHOLDER}
-              alt="Hero - New Collection"
+              src={HERO_IMAGE}
+              alt="INKDROP SS25 Collection — Blackout Logo Tee"
               fill
               sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover"
+              className="object-cover object-top"
               priority
             />
+            {/* Overlay badge */}
+            <div className="absolute bottom-6 left-6 bg-background/90 backdrop-blur-sm border border-border px-4 py-3 rounded-sm">
+              <p className="text-xs uppercase tracking-widest font-semibold text-muted-foreground">Starting at</p>
+              <p className="font-heading font-extrabold text-2xl leading-none">$38</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Collections */}
+      {/* ── COLLECTIONS ── */}
       {isLoading ? (
         <section className="py-section">
           <div className="container-custom">
@@ -102,92 +143,140 @@ export default function HomePage() {
         </>
       ) : null}
 
-      {/* Editorial / Brand Story Section */}
-      <section className="py-section bg-muted/30">
+      {/* ── PRODUCT SPOTLIGHT ── */}
+      <section className="py-section bg-foreground text-background">
         <div className="container-custom">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <div className="aspect-[4/5] bg-muted rounded-sm overflow-hidden relative">
+            <div className="space-y-6 order-2 lg:order-1">
+              <p className="text-xs uppercase tracking-[0.3em] text-accent font-semibold">Bestseller</p>
+              <h2 className="font-heading font-extrabold uppercase leading-none text-h1">
+                Blackout<br />Logo Tee
+              </h2>
+              <p className="text-muted-foreground leading-relaxed max-w-md">
+                280 GSM ring-spun cotton. Water-based ink that outlasts the trend cycle.
+                Three colorways, six sizes. This is the one.
+              </p>
+
+              {/* Feature bullets */}
+              <ul className="space-y-3">
+                {[
+                  'Heavyweight 280 GSM — feels like armor, wears like butter',
+                  'Water-based ink — zero crack, zero fade',
+                  'Relaxed unisex fit — size up for the oversized look',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-sm">
+                    <span className="mt-0.5 h-4 w-4 rounded-full bg-accent flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex flex-wrap gap-4 pt-2">
+                <Link
+                  href="/products/blackout-logo-tee"
+                  className="inline-flex items-center gap-2 bg-accent text-white px-8 py-4 text-sm font-heading font-bold uppercase tracking-widest hover:opacity-90 transition-opacity"
+                >
+                  Shop Now — $38
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="/products/blackout-logo-tee-2-pack"
+                  className="inline-flex items-center gap-2 border border-background/30 px-8 py-4 text-sm font-heading font-bold uppercase tracking-widest hover:bg-background/10 transition-colors"
+                >
+                  Get the 2-Pack — $64
+                </Link>
+              </div>
+            </div>
+
+            <div className="relative aspect-[4/5] overflow-hidden bg-muted/20 order-1 lg:order-2">
               <Image
-                src={LIFESTYLE_PLACEHOLDER}
-                alt="Lifestyle - Our Philosophy"
+                src={LIFESTYLE_IMAGE}
+                alt="Blackout Logo Tee on model"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover"
               />
             </div>
-            <div className="space-y-6 lg:max-w-md">
-              <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Our Philosophy</p>
-              <h2 className="text-h2 font-heading font-semibold">
-                Crafted With Intention
-              </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Every product in our collection is chosen for its quality, design, and the story behind it.
-                We believe in fewer, better things — pieces that last and bring joy to everyday moments.
-              </p>
-              <Link
-                href="/about"
-                className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wide link-underline pb-0.5"
-                prefetch={true}
-              >
-                Learn More
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* Trust / Features Bar */}
+      {/* ── TRUST BAR ── */}
       <section className="py-section-sm border-y">
         <div className="container-custom">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4">
-            <div className="flex items-center gap-4 justify-center text-center md:text-left md:justify-start">
-              <Truck className="h-6 w-6 flex-shrink-0" strokeWidth={1.5} />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4">
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-foreground/5 flex items-center justify-center">
+                <Truck className="h-5 w-5" strokeWidth={1.5} />
+              </div>
               <div>
                 <p className="text-sm font-semibold">Free Shipping</p>
                 <p className="text-xs text-muted-foreground">On orders over $75</p>
               </div>
             </div>
-            <div className="flex items-center gap-4 justify-center">
-              <RotateCcw className="h-6 w-6 flex-shrink-0" strokeWidth={1.5} />
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-foreground/5 flex items-center justify-center">
+                <RotateCcw className="h-5 w-5" strokeWidth={1.5} />
+              </div>
               <div>
                 <p className="text-sm font-semibold">Easy Returns</p>
                 <p className="text-xs text-muted-foreground">30-day return policy</p>
               </div>
             </div>
-            <div className="flex items-center gap-4 justify-center md:justify-end text-center md:text-right">
-              <Shield className="h-6 w-6 flex-shrink-0" strokeWidth={1.5} />
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-foreground/5 flex items-center justify-center">
+                <Shield className="h-5 w-5" strokeWidth={1.5} />
+              </div>
               <div>
                 <p className="text-sm font-semibold">Secure Checkout</p>
                 <p className="text-xs text-muted-foreground">256-bit SSL encryption</p>
+              </div>
+            </div>
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-foreground/5 flex items-center justify-center">
+                <Package className="h-5 w-5" strokeWidth={1.5} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Ships in 48h</p>
+                <p className="text-xs text-muted-foreground">Fast fulfilment, tracked</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Newsletter */}
-      <section className="py-section">
+      {/* ── NEWSLETTER ── */}
+      <section className="py-section bg-muted/30">
         <div className="container-custom max-w-xl text-center">
-          <h2 className="text-h2 font-heading font-semibold">Stay in Touch</h2>
-          <p className="mt-3 text-muted-foreground">
-            Be the first to know about new arrivals, exclusive offers, and more.
+          <p className="text-xs uppercase tracking-[0.3em] text-accent font-semibold mb-3">Drop Alerts</p>
+          <h2 className="font-heading font-extrabold uppercase text-h2 leading-none">
+            First to<br />the Drop.
+          </h2>
+          <p className="mt-4 text-muted-foreground text-sm">
+            New graphics sell out fast. Get on the list and be the first to know.
           </p>
-          <form className="mt-8 flex gap-2" onSubmit={handleNewsletterSubmit}>
-            <input
-              type="email"
-              value={newsletterEmail}
-              onChange={(e) => setNewsletterEmail(e.target.value)}
-              placeholder="Enter your email"
-              className="flex-1 border-b border-foreground/30 bg-transparent px-1 py-3 text-sm placeholder:text-muted-foreground focus:border-foreground focus:outline-none transition-colors"
-            />
-            <button
-              type="submit"
-              className="bg-foreground text-background px-6 py-3 text-sm font-semibold uppercase tracking-wide hover:opacity-90 transition-opacity whitespace-nowrap"
-            >
-              Subscribe
-            </button>
-          </form>
+          {subscribed ? (
+            <div className="mt-8 inline-flex items-center gap-2 bg-foreground text-background px-6 py-3 text-sm font-heading font-bold uppercase tracking-widest">
+              <Shield className="h-4 w-4" />
+              You&apos;re on the list.
+            </div>
+          ) : (
+            <form className="mt-8 flex gap-2" onSubmit={handleNewsletterSubmit}>
+              <input
+                type="email"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="flex-1 border-b-2 border-foreground/20 bg-transparent px-1 py-3 text-sm placeholder:text-muted-foreground focus:border-accent focus:outline-none transition-colors"
+              />
+              <button
+                type="submit"
+                className="bg-foreground text-background px-6 py-3 text-sm font-heading font-bold uppercase tracking-widest hover:opacity-90 transition-opacity whitespace-nowrap"
+              >
+                Subscribe
+              </button>
+            </form>
+          )}
         </div>
       </section>
     </>

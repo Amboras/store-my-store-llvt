@@ -82,8 +82,8 @@ export default function Header() {
 
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <span className="font-heading text-2xl font-semibold tracking-tight">
-                Store
+              <span className="font-heading text-3xl font-extrabold tracking-tight uppercase">
+                INKDROP
               </span>
             </Link>
 
