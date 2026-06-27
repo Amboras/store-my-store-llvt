@@ -127,7 +127,7 @@ export default async function ProductPage({
     : [{ url: getProductPlaceholder(product.id) }]
 
   // Calculate total inventory for urgency
-  const totalInventory = Object.values(variantExtensions).reduce(
+  const totalInventory = (Object.values(variantExtensions) as VariantExtension[]).reduce(
     (sum, ext) => sum + (ext.inventory_quantity ?? 0),
     0,
   )
